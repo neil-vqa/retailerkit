@@ -4,7 +4,7 @@ export class Component {
     this.id = baseId.startsWith("component_")
       ? baseId
       : `component_${baseId}`;
-    this.name = name.replace(/\s+/g, "_");
+    this.name = name;
     this.cost = cost;
     this.stock = stock;
   }
@@ -23,7 +23,7 @@ export class Product {
   }) {
     const baseId = (id || crypto.randomUUID()).replaceAll("-", "");
     this.id = baseId.startsWith("product_") ? baseId : `product_${baseId}`;
-    this.name = name.replace(/\s+/g, "_");
+    this.name = name;
     this.selling_price = selling_price;
     this.sales_mix_ratio = sales_mix_ratio;
     this.bill_of_materials = bill_of_materials;
