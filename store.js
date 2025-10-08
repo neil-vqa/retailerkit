@@ -10,7 +10,6 @@ const rawInitialState = {
     w_focus: 0.8,
     w_velocity: 5,
     lowerbound_score_multiplier: 0.95,
-    lowerbound_profit_multiplier: 0.8,
   },
   products: [],
   components: [],
