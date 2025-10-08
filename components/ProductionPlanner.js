@@ -1,0 +1,329 @@
+import { state, chartData } from "../state.js";
+
+export class ProductionPlanner extends HTMLElement {
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+    this.data = state.getData();
+
+    this.addEventListener("state-updated", () => {
+      state.setData(this.data);
+      this.render();
+    });
+
+    this.addEventListener("edit-item", this.handleEdit);
+    this.addEventListener("request-delete", this.handleDeleteRequest);
+  }
+
+  connectedCallback() {
+    this.render();
+  }
+
+  async handleCompute() {
+    const computeButton = this.shadowRoot.getElementById("compute");
+    computeButton.disabled = true;
+    computeButton.textContent = "Computing...";
+
+    try {
+      const requestPayload = {
+        data: {
+          general_parameters: this.data.general_parameters,
+          products: this.data.products,
+          components: this.data.components,
+        },
+      };
+
+      const response = await fetch("http://localhost:3000/solve", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestPayload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API request failed with status ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Update the chartData object and re-render the solution-analysis component
+      chartData.solutions = result.solutions;
+      this.shadowRoot.querySelector("solution-analysis").data = chartData;
+    } catch (error) {
+      console.error("Error during computation:", error);
+      alert(
+        "An error occurred while computing the solution. Please check the console for details."
+      );
+    } finally {
+      computeButton.disabled = false;
+      computeButton.textContent = "Compute";
+    }
+  }
+
+  handleEdit(e) {
+    const { type, index } = e.detail;
+    const isNew = index === undefined;
+
+    const itemData = this.getItemData(type, index, isNew);
+    const title = this.getFormTitle(type, itemData.name, isNew);
+    const formContent = this.renderForm(type, itemData, title);
+
+    const modal = this.shadowRoot.getElementById("edit-modal");
+    modal.open(formContent);
+
+    const form = modal.contentElement.querySelector(".modal-form");
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      this.saveForm(event.target, type, index);
+      modal.close();
+    });
+  }
+
+  getItemData(type, index, isNew) {
+    if (isNew) {
+      return this.getNewItem(type);
+    }
+    const item = { ...this.data[type + "s"][index] };
+    if (type === "product") {
+      item.bill_of_materials = { ...item.bill_of_materials };
+    }
+    return item;
+  }
+
+  getNewItem(type) {
+    if (type === "component") {
+      return { name: "", available: 0, cost: 0 };
+    }
+    if (type === "product") {
+      return {
+        name: "",
+        selling_price: 0,
+        sales_mix_ratio: 1,
+        bill_of_materials: {},
+        product_rating: 0,
+        is_focus_item: false,
+        sales_velocity: 0,
+      };
+    }
+    return {};
+  }
+
+  getFormTitle(type, name, isNew) {
+    const typeName = type.charAt(0).toUpperCase() + type.slice(1);
+    if (isNew) {
+      return `Add New ${typeName}`;
+    }
+    return `Edit ${name}`;
+  }
+
+  renderForm(type, itemData, title) {
+    if (type === "component") {
+      return this.renderComponentForm(itemData, title);
+    }
+    if (type === "product") {
+      return this.renderProductForm(itemData, title);
+    }
+    return "";
+  }
+
+  handleDeleteRequest(e) {
+    const { type, index } = e.detail;
+    const collection =
+      type === "product" ? this.data.products : this.data.components;
+    const item = collection[index];
+    const modal = this.shadowRoot.getElementById("confirm-modal");
+
+    const content = `
+        <p id="confirm-message">Are you sure you want to delete <strong>${item.name}</strong>?</p>
+        <div class="form-actions">
+            <button class="cancel-button button">Cancel</button>
+            <button id="confirm-delete-button" class="button danger">Delete</button>
+        </div>
+    `;
+    modal.open(content);
+
+    modal.contentElement
+      .querySelector("#confirm-delete-button")
+      .addEventListener("click", () => {
+        collection.splice(index, 1);
+        this.dispatchEvent(new CustomEvent("state-updated"));
+        modal.close();
+      });
+  }
+
+  saveForm(form, type, index) {
+    const formData = new FormData(form);
+    const isNew = index === undefined;
+
+    if (type === "component") {
+      const updatedItem = {
+        name: formData.get("name"),
+        available: parseFloat(formData.get("available")),
+        cost: parseFloat(formData.get("cost")),
+      };
+      if (isNew) this.data.components.push(updatedItem);
+      else this.data.components[index] = updatedItem;
+    } else if (type === "product") {
+      const bill_of_materials = {};
+      const originalProduct = isNew
+        ? { bill_of_materials: {} }
+        : this.data.products[index];
+      for (const key in originalProduct.bill_of_materials) {
+        if (form.querySelector(`[name="bom_${key}"]`)) {
+          bill_of_materials[key] = parseFloat(
+            form.querySelector(`[name="bom_${key}"]`).value
+          );
+        }
+      }
+
+      if (form.querySelector(".add-bom-select")?.value) {
+        bill_of_materials[form.querySelector(".add-bom-select").value] = 1;
+      }
+
+      const updatedItem = {
+        name: formData.get("name"),
+        selling_price: parseFloat(formData.get("selling_price")),
+        sales_mix_ratio: parseFloat(formData.get("sales_mix_ratio")),
+        product_rating: parseFloat(formData.get("product_rating")),
+        is_focus_item: formData.has("is_focus_item"),
+        sales_velocity: parseFloat(formData.get("sales_velocity")),
+        bill_of_materials,
+      };
+      if (isNew) this.data.products.push(updatedItem);
+      else this.data.products[index] = updatedItem;
+    }
+
+    this.dispatchEvent(new CustomEvent("state-updated"));
+  }
+
+  renderComponentForm(component, title) {
+    return `
+          <form class="modal-form">
+              <h3>${title}</h3>
+              <div class="form-group"><label>Name</label><input name="name" type="text" value="${component.name}" required></div>
+              <div class="form-group"><label>Available</label><input name="available" type="number" value="${component.available}"></div>
+              <div class="form-group"><label>Cost</label><input name="cost" type="number" step="0.01" value="${component.cost}"></div>
+              <div class="form-actions"><button type="button" class="cancel-button button">Cancel</button><button type="submit" class="button primary">Save</button></div>
+          </form>
+      `;
+  }
+
+  renderProductForm(product, title) {
+    const bomItemsHtml = Object.entries(product.bill_of_materials)
+      .map(
+        ([name, value]) => `
+          <div class="bom-item">
+              <span>${name}</span>
+              <input type="number" name="bom_${name}" value="${value}" min="0">
+              <button type="button" class="remove-bom-item-button text-button danger" data-component-name="${name}">✕</button>
+          </div>`
+      )
+      .join("");
+
+    const availableComponents = this.data.components
+      .map((c) => c.name)
+      .filter((name) => !product.bill_of_materials.hasOwnProperty(name));
+    const optionsHtml = availableComponents
+      .map((name) => `<option value="${name}">${name}</option>`)
+      .join("");
+
+    return `
+          <form class="modal-form">
+              <h3>${title}</h3>
+              <div class="form-group"><label>Name</label><input name="name" type="text" value="${
+                product.name
+              }" required></div>
+              <div class="form-group"><label>Selling Price</label><input name="selling_price" type="number" step="0.01" value="${
+                product.selling_price
+              }"></div>
+              <div class="form-group"><label>Sales Mix Ratio</label><input name="sales_mix_ratio" type="number" value="${
+                product.sales_mix_ratio
+              }"></div>
+              <div class="form-group"><label>Product Rating</label><input name="product_rating" type="number" value="${
+                product.product_rating
+              }"></div>
+              <div class="form-group"><label>Sales Velocity</label><input name="sales_velocity" type="number" value="${
+                product.sales_velocity
+              }"></div>
+              <div class="form-group">
+                <label class="checkbox-label" for="is_focus_item">Is Focus Item</label>
+                <input name="is_focus_item" type="checkbox" ${
+                  product.is_focus_item ? "checked" : ""
+                }>
+              </div>
+              <h4>Bill of Materials</h4>
+              <div id="bom-items-container">${bomItemsHtml}</div>
+              ${
+                availableComponents.length > 0
+                  ? `
+              <div class="add-bom-item">
+                  <select class="add-bom-select" style="flex-grow:1;"><option value="">-- Add component --</option>${optionsHtml}</select>
+                  <button type="submit" class="button">Add</button>
+              </div>`
+                  : ""
+              }
+              <div class="form-actions"><button type="button" class="cancel-button button">Cancel</button><button type="submit" class="button primary">Save</button></div>
+          </form>
+      `;
+  }
+
+  render() {
+    this.shadowRoot.innerHTML = `
+      <style>
+          .container {display: flex; width: 100%; align-items: start; justify-content: center; gap: 1rem;}
+          h1 { font-weight: 500; border-bottom: 1px solid #dee2e6; padding-bottom: 0.5rem; margin-top: 0; }
+          #compute { 
+            display: block;
+            width: 100%;
+            padding: 0.8em; 
+            border: none; 
+            background-color:rgb(0, 0, 0); 
+            color: white; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 1em; 
+            margin: 2rem 0;
+            font-weight: 500;
+          }
+          #compute:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+          }
+      </style>
+
+      <section class="container">
+        <div>
+          <h1>RetailerKit</h1>
+          <general-parameters></general-parameters>
+          <button id="compute">Compute</button>
+          <component-list></component-list>
+          <product-list></product-list>
+        </div>
+        <div>
+          <solution-analysis></solution-analysis>
+        </div>
+      </section>
+
+      <modal-component id="edit-modal"></modal-component>
+      <modal-component id="confirm-modal"></modal-component>
+    `;
+
+    this.shadowRoot
+      .getElementById("compute")
+      .addEventListener("click", () => this.handleCompute());
+
+    this.shadowRoot.querySelector("general-parameters").data =
+      this.data.general_parameters;
+    this.shadowRoot.querySelector("component-list").data = {
+      components: this.data.components,
+      allData: this.data,
+    };
+    this.shadowRoot.querySelector("product-list").data = {
+      products: this.data.products,
+      components: this.data.components,
+      allData: this.data,
+    };
+    this.shadowRoot.querySelector("solution-analysis").data = chartData;
+  }
+}
