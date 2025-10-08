@@ -36,7 +36,7 @@ export class ProductionPlanner extends HTMLElement {
         data: {
           general_parameters: data.general_parameters,
           products: data.products.map((p) => ({
-            id: p.id,
+            name: p.id,
             selling_price: p.selling_price,
             sales_mix_ratio: p.sales_mix_ratio,
             product_rating: p.product_rating,
@@ -54,7 +54,7 @@ export class ProductionPlanner extends HTMLElement {
             ),
           })),
           components: data.components.map((c) => ({
-            id: c.id,
+            name: c.id,
             available: c.stock,
             cost: c.cost,
           })),
