@@ -88,6 +88,21 @@ export class SolutionAnalysis extends HTMLElement {
   }
 
   _render() {
+    const scatterPlotContainer = this.shadowRoot.getElementById("scatter-plot");
+    const barChartContainer = this.shadowRoot.getElementById("bar-chart");
+    const scatterPlotInfo = this.shadowRoot.getElementById("scatter-plot-info");
+
+    scatterPlotContainer.innerHTML = "";
+    barChartContainer.innerHTML = "";
+    scatterPlotInfo.innerHTML = "";
+
+    if (!this._data || !this._data.solutions || this._data.solutions.length === 0) {
+      scatterPlotInfo.innerHTML = "Compute a solution to see analysis.";
+      this.shadowRoot.getElementById("bar-chart-title").textContent =
+        "Production Plan";
+      return;
+    }
+
     const processedData = this._data.solutions.map((d, i) => ({
       id: i,
       gross_profit: d.financial_summary.gross_profit,
@@ -98,10 +113,6 @@ export class SolutionAnalysis extends HTMLElement {
     const margin = { top: 20, right: 30, bottom: 50, left: 60 };
     const width = 460 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
-
-    const scatterPlotContainer = this.shadowRoot.getElementById("scatter-plot");
-    const scatterPlotInfo = this.shadowRoot.getElementById("scatter-plot-info");
-    scatterPlotContainer.innerHTML = "";
 
     const svgScatter = d3
       .select(scatterPlotContainer)
@@ -146,8 +157,6 @@ export class SolutionAnalysis extends HTMLElement {
     const barWidth = 350 - margin.left - margin.right;
     const barHeight = 350 - margin.top - margin.bottom;
 
-    const barChartContainer = this.shadowRoot.getElementById("bar-chart");
-    barChartContainer.innerHTML = "";
     const svgBar = d3
       .select(barChartContainer)
       .append("svg")

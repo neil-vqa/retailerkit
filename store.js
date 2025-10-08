@@ -12,114 +12,12 @@ const rawInitialState = {
     lowerbound_score_multiplier: 0.95,
     lowerbound_profit_multiplier: 0.8,
   },
-  products: [
-    {
-      name: "Coffee",
-      selling_price: 3.0,
-      sales_mix_ratio: 1,
-      bill_of_materials: { Coffee_Inv: 1, Cake_Slice_Inv: 0 },
-      product_rating: 8,
-      is_focus_item: false,
-      sales_velocity: 3,
-    },
-    {
-      name: "Cake_Slice",
-      selling_price: 4.0,
-      sales_mix_ratio: 1,
-      bill_of_materials: { Coffee_Inv: 0, Cake_Slice_Inv: 1 },
-      product_rating: 7,
-      is_focus_item: false,
-      sales_velocity: 3,
-    },
-    {
-      name: "Morning_Deal",
-      selling_price: 6.5,
-      sales_mix_ratio: 1,
-      bill_of_materials: { Coffee_Inv: 1, Cake_Slice_Inv: 1 },
-      product_rating: 10,
-      is_focus_item: true,
-      sales_velocity: 10,
-    },
-  ],
-  components: [
-    { name: "Coffee_Inv", available: 100, cost: 0.5 },
-    { name: "Cake_Slice_Inv", available: 50, cost: 1.0 },
-  ],
+  products: [],
+  components: [],
 };
 
 const chartData = {
-  solutions: [
-    {
-      production_plan: { Coffee: 54, Cake_Slice: 4, Morning_Deal: 46 },
-      financial_summary: {
-        gross_profit: 377,
-        total_revenue: 477,
-        total_cogs: 100,
-      },
-      strategic_summary: {
-        total_rating_score: 920,
-        total_focus_score: 46,
-        total_velocity_score: 634,
-        total_value_score: 5423.8,
-      },
-    },
-    {
-      production_plan: { Coffee: 53, Cake_Slice: 3, Morning_Deal: 47 },
-      financial_summary: {
-        gross_profit: 376.5,
-        total_revenue: 476.5,
-        total_cogs: 100,
-      },
-      strategic_summary: {
-        total_rating_score: 915,
-        total_focus_score: 47,
-        total_velocity_score: 638,
-        total_value_score: 5434.1,
-      },
-    },
-    {
-      production_plan: { Coffee: 52, Cake_Slice: 2, Morning_Deal: 48 },
-      financial_summary: {
-        gross_profit: 376,
-        total_revenue: 476,
-        total_cogs: 100,
-      },
-      strategic_summary: {
-        total_rating_score: 910,
-        total_focus_score: 48,
-        total_velocity_score: 642,
-        total_value_score: 5444.4,
-      },
-    },
-    {
-      production_plan: { Coffee: 51, Cake_Slice: 1, Morning_Deal: 49 },
-      financial_summary: {
-        gross_profit: 375.5,
-        total_revenue: 475.5,
-        total_cogs: 100,
-      },
-      strategic_summary: {
-        total_rating_score: 905,
-        total_focus_score: 49,
-        total_velocity_score: 646,
-        total_value_score: 5454.7,
-      },
-    },
-    {
-      production_plan: { Coffee: 50, Cake_Slice: 0, Morning_Deal: 50 },
-      financial_summary: {
-        gross_profit: 375,
-        total_revenue: 475,
-        total_cogs: 100,
-      },
-      strategic_summary: {
-        total_rating_score: 900,
-        total_focus_score: 50,
-        total_velocity_score: 650,
-        total_value_score: 5465,
-      },
-    },
-  ],
+  solutions: [],
 };
 
 class Store {
@@ -129,9 +27,11 @@ class Store {
   }
 
   _loadState() {
-    const savedGeneralParameters = localStorage.getItem("general_parameters");
-    const savedProducts = localStorage.getItem("products");
-    const savedComponents = localStorage.getItem("components");
+    const savedGeneralParameters = localStorage.getItem(
+      "productionPlan_general_parameters"
+    );
+    const savedProducts = localStorage.getItem("productionPlan_products");
+    const savedComponents = localStorage.getItem("productionPlan_components");
 
     const general_parameters = savedGeneralParameters
       ? JSON.parse(savedGeneralParameters)
@@ -153,15 +53,15 @@ class Store {
 
   _saveState() {
     localStorage.setItem(
-      "general_parameters",
+      "productionPlan_general_parameters",
       JSON.stringify(this.state.general_parameters, null, 2)
     );
     localStorage.setItem(
-      "products",
+      "productionPlan_products",
       JSON.stringify(this.state.products, null, 2)
     );
     localStorage.setItem(
-      "components",
+      "productionPlan_components",
       JSON.stringify(this.state.components, null, 2)
     );
   }
