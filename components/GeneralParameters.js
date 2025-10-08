@@ -1,3 +1,5 @@
+import { store } from "../store.js";
+
 export class GeneralParameters extends HTMLElement {
   constructor() {
     super();
@@ -25,14 +27,8 @@ export class GeneralParameters extends HTMLElement {
   }
 
   handleSave() {
-    Object.assign(this.data, this._localData);
-
-    this.dispatchEvent(
-      new CustomEvent("state-updated", {
-        bubbles: true,
-        composed: true,
-      })
-    );
+    const currentState = store.getState();
+    store.setState({ ...currentState, general_parameters: this._localData });
 
     const saveButton = this.shadowRoot.getElementById("save-button");
     if (saveButton) {

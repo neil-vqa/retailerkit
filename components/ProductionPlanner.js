@@ -1,22 +1,24 @@
-import { state, chartData } from "../state.js";
+import { store, chartData } from "../store.js";
+import { Product, Component } from "../models.js";
 
 export class ProductionPlanner extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
-    this.data = state.getData();
-
-    this.addEventListener("state-updated", () => {
-      state.setData(this.data);
-      this.render();
-    });
 
     this.addEventListener("edit-item", this.handleEdit);
     this.addEventListener("request-delete", this.handleDeleteRequest);
   }
 
   connectedCallback() {
+    this.unsubscribe = store.subscribe(() => this.render());
     this.render();
+  }
+
+  disconnectedCallback() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
   }
 
   async handleCompute() {
@@ -25,11 +27,16 @@ export class ProductionPlanner extends HTMLElement {
     computeButton.textContent = "Computing...";
 
     try {
+      const data = store.getState();
       const requestPayload = {
         data: {
-          general_parameters: this.data.general_parameters,
-          products: this.data.products,
-          components: this.data.components,
+          general_parameters: data.general_parameters,
+          products: data.products,
+          components: data.components.map((c) => ({
+            name: c.name,
+            available: c.stock,
+            cost: c.cost,
+          })),
         },
       };
 
@@ -84,7 +91,8 @@ export class ProductionPlanner extends HTMLElement {
     if (isNew) {
       return this.getNewItem(type);
     }
-    const item = { ...this.data[type + "s"][index] };
+    const data = store.getState();
+    const item = { ...data[type + "s"][index] };
     if (type === "product") {
       item.bill_of_materials = { ...item.bill_of_materials };
     }
@@ -93,7 +101,7 @@ export class ProductionPlanner extends HTMLElement {
 
   getNewItem(type) {
     if (type === "component") {
-      return { name: "", available: 0, cost: 0 };
+      return { name: "", stock: 0, cost: 0 };
     }
     if (type === "product") {
       return {
@@ -129,8 +137,9 @@ export class ProductionPlanner extends HTMLElement {
 
   handleDeleteRequest(e) {
     const { type, index } = e.detail;
+    const data = store.getState();
     const collection =
-      type === "product" ? this.data.products : this.data.components;
+      type === "product" ? data.products : data.components;
     const item = collection[index];
     const modal = this.shadowRoot.getElementById("confirm-modal");
 
@@ -146,8 +155,13 @@ export class ProductionPlanner extends HTMLElement {
     modal.contentElement
       .querySelector("#confirm-delete-button")
       .addEventListener("click", () => {
-        collection.splice(index, 1);
-        this.dispatchEvent(new CustomEvent("state-updated"));
+        const newCollection = [...collection];
+        newCollection.splice(index, 1);
+        if (type === "product") {
+          store.setState({ ...data, products: newCollection });
+        } else {
+          store.setState({ ...data, components: newCollection });
+        }
         modal.close();
       });
   }
@@ -155,20 +169,23 @@ export class ProductionPlanner extends HTMLElement {
   saveForm(form, type, index) {
     const formData = new FormData(form);
     const isNew = index === undefined;
+    const data = store.getState();
 
     if (type === "component") {
-      const updatedItem = {
+      const updatedItem = new Component({
         name: formData.get("name"),
-        available: parseFloat(formData.get("available")),
+        stock: parseFloat(formData.get("stock")),
         cost: parseFloat(formData.get("cost")),
-      };
-      if (isNew) this.data.components.push(updatedItem);
-      else this.data.components[index] = updatedItem;
+      });
+      const newComponents = [...data.components];
+      if (isNew) newComponents.push(updatedItem);
+      else newComponents[index] = updatedItem;
+      store.setState({ ...data, components: newComponents });
     } else if (type === "product") {
       const bill_of_materials = {};
       const originalProduct = isNew
         ? { bill_of_materials: {} }
-        : this.data.products[index];
+        : data.products[index];
       for (const key in originalProduct.bill_of_materials) {
         if (form.querySelector(`[name="bom_${key}"]`)) {
           bill_of_materials[key] = parseFloat(
@@ -181,7 +198,7 @@ export class ProductionPlanner extends HTMLElement {
         bill_of_materials[form.querySelector(".add-bom-select").value] = 1;
       }
 
-      const updatedItem = {
+      const updatedItem = new Product({
         name: formData.get("name"),
         selling_price: parseFloat(formData.get("selling_price")),
         sales_mix_ratio: parseFloat(formData.get("sales_mix_ratio")),
@@ -189,12 +206,12 @@ export class ProductionPlanner extends HTMLElement {
         is_focus_item: formData.has("is_focus_item"),
         sales_velocity: parseFloat(formData.get("sales_velocity")),
         bill_of_materials,
-      };
-      if (isNew) this.data.products.push(updatedItem);
-      else this.data.products[index] = updatedItem;
+      });
+      const newProducts = [...data.products];
+      if (isNew) newProducts.push(updatedItem);
+      else newProducts[index] = updatedItem;
+      store.setState({ ...data, products: newProducts });
     }
-
-    this.dispatchEvent(new CustomEvent("state-updated"));
   }
 
   renderComponentForm(component, title) {
@@ -202,7 +219,7 @@ export class ProductionPlanner extends HTMLElement {
           <form class="modal-form">
               <h3>${title}</h3>
               <div class="form-group"><label>Name</label><input name="name" type="text" value="${component.name}" required></div>
-              <div class="form-group"><label>Available</label><input name="available" type="number" value="${component.available}"></div>
+              <div class="form-group"><label>Stock</label><input name="stock" type="number" value="${component.stock}"></div>
               <div class="form-group"><label>Cost</label><input name="cost" type="number" step="0.01" value="${component.cost}"></div>
               <div class="form-actions"><button type="button" class="cancel-button button">Cancel</button><button type="submit" class="button primary">Save</button></div>
           </form>
@@ -210,6 +227,7 @@ export class ProductionPlanner extends HTMLElement {
   }
 
   renderProductForm(product, title) {
+    const data = store.getState();
     const bomItemsHtml = Object.entries(product.bill_of_materials)
       .map(
         ([name, value]) => `
@@ -221,7 +239,7 @@ export class ProductionPlanner extends HTMLElement {
       )
       .join("");
 
-    const availableComponents = this.data.components
+    const availableComponents = data.components
       .map((c) => c.name)
       .filter((name) => !product.bill_of_materials.hasOwnProperty(name));
     const optionsHtml = availableComponents
@@ -269,6 +287,7 @@ export class ProductionPlanner extends HTMLElement {
   }
 
   render() {
+    const data = store.getState();
     this.shadowRoot.innerHTML = `
       <style>
           .container {display: flex; width: 100%; align-items: start; justify-content: center; gap: 1rem;}
@@ -314,15 +333,15 @@ export class ProductionPlanner extends HTMLElement {
       .addEventListener("click", () => this.handleCompute());
 
     this.shadowRoot.querySelector("general-parameters").data =
-      this.data.general_parameters;
+      data.general_parameters;
     this.shadowRoot.querySelector("component-list").data = {
-      components: this.data.components,
-      allData: this.data,
+      components: data.components,
+      allData: data,
     };
     this.shadowRoot.querySelector("product-list").data = {
-      products: this.data.products,
-      components: this.data.components,
-      allData: this.data,
+      products: data.products,
+      components: data.components,
+      allData: data,
     };
     this.shadowRoot.querySelector("solution-analysis").data = chartData;
   }
