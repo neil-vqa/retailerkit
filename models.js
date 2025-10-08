@@ -1,7 +1,8 @@
 export class Component {
-  constructor({ id, name, cost, stock }) {
+  constructor({ id, name, displayName, cost, stock }) {
     this.id = id || crypto.randomUUID();
-    this.name = name;
+    this.displayName = displayName || name;
+    this.name = (displayName || name).replace(/\s+/g, "_");
     this.cost = cost;
     this.stock = stock;
   }
@@ -11,6 +12,7 @@ export class Product {
   constructor({
     id,
     name,
+    displayName,
     selling_price,
     sales_mix_ratio,
     bill_of_materials,
@@ -19,7 +21,8 @@ export class Product {
     sales_velocity,
   }) {
     this.id = id || crypto.randomUUID();
-    this.name = name;
+    this.displayName = displayName || name;
+    this.name = (displayName || name).replace(/\s+/g, "_");
     this.selling_price = selling_price;
     this.sales_mix_ratio = sales_mix_ratio;
     this.bill_of_materials = bill_of_materials;
