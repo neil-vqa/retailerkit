@@ -28,12 +28,33 @@ export class ProductionPlanner extends HTMLElement {
 
     try {
       const data = store.getState();
+      const componentNameToIdMap = new Map(
+        data.components.map((c) => [c.name, c.id])
+      );
+
       const requestPayload = {
         data: {
           general_parameters: data.general_parameters,
-          products: data.products,
+          products: data.products.map((p) => ({
+            id: p.id,
+            selling_price: p.selling_price,
+            sales_mix_ratio: p.sales_mix_ratio,
+            product_rating: p.product_rating,
+            is_focus_item: p.is_focus_item,
+            sales_velocity: p.sales_velocity,
+            bill_of_materials: Object.entries(p.bill_of_materials).reduce(
+              (acc, [componentName, quantity]) => {
+                const componentId = componentNameToIdMap.get(componentName);
+                if (componentId) {
+                  acc[componentId] = quantity;
+                }
+                return acc;
+              },
+              {}
+            ),
+          })),
           components: data.components.map((c) => ({
-            name: c.name,
+            id: c.id,
             available: c.stock,
             cost: c.cost,
           })),

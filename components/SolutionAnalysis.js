@@ -104,7 +104,7 @@ export class SolutionAnalysis extends HTMLElement {
     }
 
     const productDisplayNameMap = new Map(
-      this._data.products.map((p) => [p.name, p.displayName])
+      this._data.products.map((p) => [p.id, p.displayName])
     );
 
     const processedData = this._data.solutions.map((d, i) => ({
