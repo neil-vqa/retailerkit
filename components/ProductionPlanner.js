@@ -71,12 +71,28 @@ export class ProductionPlanner extends HTMLElement {
   handleEdit(e) {
     const { type, id } = e.detail;
     const isNew = id === undefined;
-
     const itemData = this.getItemData(type, id, isNew);
     const title = this.getFormTitle(type, itemData.name, isNew);
-    const formContent = this.renderForm(type, itemData, title);
 
+    if (type === "product") {
+      this.openProductModal(itemData, title, type, id);
+    } else {
+      const formContent = this.renderForm(type, itemData, title);
+      const modal = this.shadowRoot.getElementById("edit-modal");
+      modal.open(formContent);
+
+      const form = modal.contentElement.querySelector(".modal-form");
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        this.saveForm(event.target, type, id);
+        modal.close();
+      });
+    }
+  }
+
+  openProductModal(itemData, title, type, id) {
     const modal = this.shadowRoot.getElementById("edit-modal");
+    const formContent = this.renderProductForm(itemData, title);
     modal.open(formContent);
 
     const form = modal.contentElement.querySelector(".modal-form");
@@ -84,6 +100,33 @@ export class ProductionPlanner extends HTMLElement {
       event.preventDefault();
       this.saveForm(event.target, type, id);
       modal.close();
+    });
+
+    // Add listener for adding a BOM item
+    const addBomButton = modal.contentElement.querySelector(
+      ".add-bom-item button"
+    );
+    if (addBomButton) {
+      addBomButton.addEventListener("click", () => {
+        const select = modal.contentElement.querySelector(".add-bom-select");
+        const componentName = select.value;
+        if (componentName) {
+          itemData.bill_of_materials[componentName] = 1; // Default quantity to 1
+          this.openProductModal(itemData, title, type, id); // Re-render modal
+        }
+      });
+    }
+
+    // Add listeners for removing BOM items
+    const removeBomButtons = modal.contentElement.querySelectorAll(
+      ".remove-bom-item-button"
+    );
+    removeBomButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        const componentName = e.target.dataset.componentName;
+        delete itemData.bill_of_materials[componentName];
+        this.openProductModal(itemData, title, type, id); // Re-render modal
+      });
     });
   }
 
@@ -186,21 +229,11 @@ export class ProductionPlanner extends HTMLElement {
       store.setState({ ...data, components: newComponents });
     } else if (type === "product") {
       const bill_of_materials = {};
-      const originalProduct = isNew
-        ? { bill_of_materials: {} }
-        : data.products.find((p) => p.id === id);
-
-      for (const key in originalProduct.bill_of_materials) {
-        if (form.querySelector(`[name="bom_${key}"]`)) {
-          bill_of_materials[key] = parseFloat(
-            form.querySelector(`[name="bom_${key}"]`).value
-          );
-        }
-      }
-
-      if (form.querySelector(".add-bom-select")?.value) {
-        bill_of_materials[form.querySelector(".add-bom-select").value] = 1;
-      }
+      const bomInputs = form.querySelectorAll('[name^="bom_"]');
+      bomInputs.forEach((input) => {
+        const componentName = input.name.replace("bom_", "");
+        bill_of_materials[componentName] = parseFloat(input.value);
+      });
 
       const updatedItem = new Product({
         id: isNew ? undefined : id,
@@ -238,7 +271,7 @@ export class ProductionPlanner extends HTMLElement {
         ([name, value]) => `
           <div class="bom-item">
               <span>${name}</span>
-              <input type="number" name="bom_${name}" value="${value}" min="0">
+              <input type="number" name="bom_${name}" value="${value}" min="0" step="any">
               <button type="button" class="remove-bom-item-button text-button danger" data-component-name="${name}">✕</button>
           </div>`
       )
@@ -282,7 +315,7 @@ export class ProductionPlanner extends HTMLElement {
                   ? `
               <div class="add-bom-item">
                   <select class="add-bom-select" style="flex-grow:1;"><option value="">-- Add component --</option>${optionsHtml}</select>
-                  <button type="submit" class="button">Add</button>
+                  <button type="button" class="button">Add</button>
               </div>`
                   : ""
               }
