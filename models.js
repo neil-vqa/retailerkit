@@ -1,6 +1,9 @@
 export class Component {
   constructor({ id, name, cost, stock }) {
-    this.id = (id || crypto.randomUUID()).replaceAll("-", "");
+    const baseId = (id || crypto.randomUUID()).replaceAll("-", "");
+    this.id = baseId.startsWith("component_")
+      ? baseId
+      : `component_${baseId}`;
     this.name = name.replace(/\s+/g, "_");
     this.cost = cost;
     this.stock = stock;
@@ -18,7 +21,8 @@ export class Product {
     is_focus_item,
     sales_velocity,
   }) {
-    this.id = (id || crypto.randomUUID()).replaceAll("-", "");
+    const baseId = (id || crypto.randomUUID()).replaceAll("-", "");
+    this.id = baseId.startsWith("product_") ? baseId : `product_${baseId}`;
     this.name = name.replace(/\s+/g, "_");
     this.selling_price = selling_price;
     this.sales_mix_ratio = sales_mix_ratio;
