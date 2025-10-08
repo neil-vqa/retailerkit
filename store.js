@@ -129,26 +129,42 @@ class Store {
   }
 
   _loadState() {
-    const savedState = localStorage.getItem("productionPlan");
-    if (savedState) {
-      const parsed = JSON.parse(savedState);
-      return {
-        general_parameters: parsed.general_parameters,
-        products: parsed.products.map((p) => new Product(p)),
-        components: parsed.components.map((c) => new Component(c)),
-      };
-    }
-    return {
-      general_parameters: rawInitialState.general_parameters,
-      products: rawInitialState.products.map((p) => new Product(p)),
-      components: rawInitialState.components.map(
-        (c) => new Component({ name: c.name, cost: c.cost, stock: c.available })
-      ),
-    };
+    const savedGeneralParameters = localStorage.getItem(
+      "productionPlan_general_parameters"
+    );
+    const savedProducts = localStorage.getItem("productionPlan_products");
+    const savedComponents = localStorage.getItem("productionPlan_components");
+
+    const general_parameters = savedGeneralParameters
+      ? JSON.parse(savedGeneralParameters)
+      : rawInitialState.general_parameters;
+
+    const products = savedProducts
+      ? JSON.parse(savedProducts).map((p) => new Product(p))
+      : rawInitialState.products.map((p) => new Product(p));
+
+    const components = savedComponents
+      ? JSON.parse(savedComponents).map((c) => new Component(c))
+      : rawInitialState.components.map(
+          (c) => new Component({ name: c.name, cost: c.cost, stock: c.available })
+        );
+
+    return { general_parameters, products, components };
   }
 
   _saveState() {
-    localStorage.setItem("productionPlan", JSON.stringify(this.state, null, 2));
+    localStorage.setItem(
+      "productionPlan_general_parameters",
+      JSON.stringify(this.state.general_parameters, null, 2)
+    );
+    localStorage.setItem(
+      "productionPlan_products",
+      JSON.stringify(this.state.products, null, 2)
+    );
+    localStorage.setItem(
+      "productionPlan_components",
+      JSON.stringify(this.state.components, null, 2)
+    );
   }
 
   _notify() {
