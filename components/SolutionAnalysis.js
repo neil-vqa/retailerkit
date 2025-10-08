@@ -72,14 +72,14 @@ export class SolutionAnalysis extends HTMLElement {
 
   connectedCallback() {
     if (this.data) {
-      this._render();
+      this.render();
     }
   }
 
   set data(data) {
     this._data = data;
     if (this.isConnected) {
-      this._render();
+      this.render();
     }
   }
 
@@ -87,7 +87,7 @@ export class SolutionAnalysis extends HTMLElement {
     return this._data;
   }
 
-  _render() {
+  render() {
     const scatterPlotContainer = this.shadowRoot.getElementById("scatter-plot");
     const barChartContainer = this.shadowRoot.getElementById("bar-chart");
     const scatterPlotInfo = this.shadowRoot.getElementById("scatter-plot-info");
@@ -96,7 +96,11 @@ export class SolutionAnalysis extends HTMLElement {
     barChartContainer.innerHTML = "";
     scatterPlotInfo.innerHTML = "";
 
-    if (!this._data || !this._data.solutions || this._data.solutions.length === 0) {
+    if (
+      !this._data ||
+      !this._data.solutions ||
+      this._data.solutions.length === 0
+    ) {
       scatterPlotInfo.innerHTML = "Compute a solution to see analysis.";
       this.shadowRoot.getElementById("bar-chart-title").textContent =
         "Production Plan";
