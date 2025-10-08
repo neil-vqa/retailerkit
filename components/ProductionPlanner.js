@@ -69,10 +69,10 @@ export class ProductionPlanner extends HTMLElement {
   }
 
   handleEdit(e) {
-    const { type, index } = e.detail;
-    const isNew = index === undefined;
+    const { type, id } = e.detail;
+    const isNew = id === undefined;
 
-    const itemData = this.getItemData(type, index, isNew);
+    const itemData = this.getItemData(type, id, isNew);
     const title = this.getFormTitle(type, itemData.name, isNew);
     const formContent = this.renderForm(type, itemData, title);
 
@@ -82,17 +82,18 @@ export class ProductionPlanner extends HTMLElement {
     const form = modal.contentElement.querySelector(".modal-form");
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      this.saveForm(event.target, type, index);
+      this.saveForm(event.target, type, id);
       modal.close();
     });
   }
 
-  getItemData(type, index, isNew) {
+  getItemData(type, id, isNew) {
     if (isNew) {
       return this.getNewItem(type);
     }
     const data = store.getState();
-    const item = { ...data[type + "s"][index] };
+    const collection = data[type + "s"];
+    const item = { ...collection.find((item) => item.id === id) };
     if (type === "product") {
       item.bill_of_materials = { ...item.bill_of_materials };
     }
@@ -136,11 +137,13 @@ export class ProductionPlanner extends HTMLElement {
   }
 
   handleDeleteRequest(e) {
-    const { type, index } = e.detail;
+    const { type, id } = e.detail;
     const data = store.getState();
     const collection =
       type === "product" ? data.products : data.components;
-    const item = collection[index];
+    const item = collection.find((i) => i.id === id);
+    if (!item) return;
+
     const modal = this.shadowRoot.getElementById("confirm-modal");
 
     const content = `
@@ -155,8 +158,7 @@ export class ProductionPlanner extends HTMLElement {
     modal.contentElement
       .querySelector("#confirm-delete-button")
       .addEventListener("click", () => {
-        const newCollection = [...collection];
-        newCollection.splice(index, 1);
+        const newCollection = collection.filter((i) => i.id !== id);
         if (type === "product") {
           store.setState({ ...data, products: newCollection });
         } else {
@@ -166,26 +168,28 @@ export class ProductionPlanner extends HTMLElement {
       });
   }
 
-  saveForm(form, type, index) {
+  saveForm(form, type, id) {
     const formData = new FormData(form);
-    const isNew = index === undefined;
+    const isNew = id === undefined;
     const data = store.getState();
 
     if (type === "component") {
       const updatedItem = new Component({
+        id: isNew ? undefined : id,
         name: formData.get("name"),
         stock: parseFloat(formData.get("stock")),
         cost: parseFloat(formData.get("cost")),
       });
-      const newComponents = [...data.components];
-      if (isNew) newComponents.push(updatedItem);
-      else newComponents[index] = updatedItem;
+      const newComponents = isNew
+        ? [...data.components, updatedItem]
+        : data.components.map((c) => (c.id === id ? updatedItem : c));
       store.setState({ ...data, components: newComponents });
     } else if (type === "product") {
       const bill_of_materials = {};
       const originalProduct = isNew
         ? { bill_of_materials: {} }
-        : data.products[index];
+        : data.products.find((p) => p.id === id);
+
       for (const key in originalProduct.bill_of_materials) {
         if (form.querySelector(`[name="bom_${key}"]`)) {
           bill_of_materials[key] = parseFloat(
@@ -199,6 +203,7 @@ export class ProductionPlanner extends HTMLElement {
       }
 
       const updatedItem = new Product({
+        id: isNew ? undefined : id,
         name: formData.get("name"),
         selling_price: parseFloat(formData.get("selling_price")),
         sales_mix_ratio: parseFloat(formData.get("sales_mix_ratio")),
@@ -207,9 +212,9 @@ export class ProductionPlanner extends HTMLElement {
         sales_velocity: parseFloat(formData.get("sales_velocity")),
         bill_of_materials,
       });
-      const newProducts = [...data.products];
-      if (isNew) newProducts.push(updatedItem);
-      else newProducts[index] = updatedItem;
+      const newProducts = isNew
+        ? [...data.products, updatedItem]
+        : data.products.map((p) => (p.id === id ? updatedItem : p));
       store.setState({ ...data, products: newProducts });
     }
   }

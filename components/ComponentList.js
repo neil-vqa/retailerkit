@@ -25,9 +25,9 @@ export class ComponentList extends HTMLElement {
       </section>`;
     const container = this.shadowRoot.getElementById("component-items");
     container.innerHTML = "";
-    this.data.components.forEach((component, index) => {
+    this.data.components.forEach((component) => {
       const item = document.createElement("component-item");
-      item.data = { component, index, allData: this.data.allData };
+      item.data = { component, allData: this.data.allData };
       container.appendChild(item);
     });
     this.shadowRoot

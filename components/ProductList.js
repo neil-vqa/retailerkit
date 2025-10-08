@@ -25,11 +25,10 @@ export class ProductList extends HTMLElement {
       </section>`;
     const container = this.shadowRoot.getElementById("product-items");
     container.innerHTML = "";
-    this.data.products.forEach((product, index) => {
+    this.data.products.forEach((product) => {
       const item = document.createElement("product-item");
       item.data = {
         product,
-        index,
         components: this.data.components,
         allData: this.data.allData,
       };

@@ -34,7 +34,7 @@ export class ComponentItem extends HTMLElement {
           new CustomEvent("edit-item", {
             bubbles: true,
             composed: true,
-            detail: { type: "component", index: this.data.index },
+            detail: { type: "component", id: this.data.component.id },
           })
         );
       });
@@ -45,7 +45,7 @@ export class ComponentItem extends HTMLElement {
           new CustomEvent("request-delete", {
             bubbles: true,
             composed: true,
-            detail: { type: "component", index: this.data.index },
+            detail: { type: "component", id: this.data.component.id },
           })
         );
       });

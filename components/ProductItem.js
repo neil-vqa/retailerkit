@@ -34,7 +34,7 @@ export class ProductItem extends HTMLElement {
           new CustomEvent("edit-item", {
             bubbles: true,
             composed: true,
-            detail: { type: "product", index: this.data.index },
+            detail: { type: "product", id: this.data.product.id },
           })
         );
       });
@@ -45,7 +45,7 @@ export class ProductItem extends HTMLElement {
           new CustomEvent("request-delete", {
             bubbles: true,
             composed: true,
-            detail: { type: "product", index: this.data.index },
+            detail: { type: "product", id: this.data.product.id },
           })
         );
       });
