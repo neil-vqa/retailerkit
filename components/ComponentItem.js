@@ -20,7 +20,7 @@ export class ComponentItem extends HTMLElement {
         .text-button.danger { color: #dc3545; }
       </style>
       <div class="list-item">
-          <span class="list-item-name">${this.data.component.displayName}</span>
+          <span class="list-item-name">${this.data.component.name}</span>
           <div>
               <button class="edit-button text-button">Edit</button>
               <button class="remove-button text-button danger">Delete</button>

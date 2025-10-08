@@ -96,7 +96,7 @@ export class ProductionPlanner extends HTMLElement {
     const { type, id } = e.detail;
     const isNew = id === undefined;
     const itemData = this.getItemData(type, id, isNew);
-    const title = this.getFormTitle(type, itemData.displayName, isNew);
+    const title = this.getFormTitle(type, itemData.name, isNew);
 
     if (type === "product") {
       this.openProductModal(itemData, title, type, id);
@@ -169,11 +169,11 @@ export class ProductionPlanner extends HTMLElement {
 
   getNewItem(type) {
     if (type === "component") {
-      return { displayName: "", stock: 0, cost: 0 };
+      return { name: "", stock: 0, cost: 0 };
     }
     if (type === "product") {
       return {
-        displayName: "",
+        name: "",
         selling_price: 0,
         sales_mix_ratio: 1,
         bill_of_materials: {},
@@ -214,7 +214,7 @@ export class ProductionPlanner extends HTMLElement {
     const modal = this.shadowRoot.getElementById("confirm-modal");
 
     const content = `
-        <p id="confirm-message">Are you sure you want to delete <strong>${item.displayName}</strong>?</p>
+        <p id="confirm-message">Are you sure you want to delete <strong>${item.name}</strong>?</p>
         <div class="form-actions">
             <button class="cancel-button button">Cancel</button>
             <button id="confirm-delete-button" class="button danger">Delete</button>
@@ -243,7 +243,7 @@ export class ProductionPlanner extends HTMLElement {
     if (type === "component") {
       const updatedItem = new Component({
         id: isNew ? undefined : id,
-        displayName: formData.get("displayName"),
+        name: formData.get("name"),
         stock: parseFloat(formData.get("stock")),
         cost: parseFloat(formData.get("cost")),
       });
@@ -261,7 +261,7 @@ export class ProductionPlanner extends HTMLElement {
 
       const updatedItem = new Product({
         id: isNew ? undefined : id,
-        displayName: formData.get("displayName"),
+        name: formData.get("name"),
         selling_price: parseFloat(formData.get("selling_price")),
         sales_mix_ratio: parseFloat(formData.get("sales_mix_ratio")),
         product_rating: parseFloat(formData.get("product_rating")),
@@ -280,8 +280,8 @@ export class ProductionPlanner extends HTMLElement {
     return `
           <form class="modal-form">
               <h3>${title}</h3>
-              <div class="form-group"><label>Name</label><input name="displayName" type="text" value="${
-                component.displayName
+              <div class="form-group"><label>Name</label><input name="name" type="text" value="${
+                component.name
               }" required></div>
               <div class="form-group"><label>Stock</label><input name="stock" type="number" value="${
                 component.stock
@@ -296,14 +296,11 @@ export class ProductionPlanner extends HTMLElement {
 
   renderProductForm(product, title) {
     const data = store.getState();
-    const componentNameMap = new Map(
-      data.components.map((c) => [c.name, c.displayName])
-    );
     const bomItemsHtml = Object.entries(product.bill_of_materials)
       .map(
         ([name, value]) => `
           <div class="bom-item">
-              <span>${componentNameMap.get(name) || name}</span>
+              <span>${name}</span>
               <input type="number" name="bom_${name}" value="${value}" min="0" step="any">
               <button type="button" class="remove-bom-item-button text-button danger" data-component-name="${name}">✕</button>
           </div>`
@@ -314,14 +311,14 @@ export class ProductionPlanner extends HTMLElement {
       (c) => !product.bill_of_materials.hasOwnProperty(c.name)
     );
     const optionsHtml = availableComponents
-      .map((c) => `<option value="${c.name}">${c.displayName}</option>`)
+      .map((c) => `<option value="${c.name}">${c.name}</option>`)
       .join("");
 
     return `
           <form class="modal-form">
               <h3>${title}</h3>
-              <div class="form-group"><label>Name</label><input name="displayName" type="text" value="${
-                product.displayName
+              <div class="form-group"><label>Name</label><input name="name" type="text" value="${
+                product.name
               }" required></div>
               <div class="form-group"><label>Selling Price</label><input name="selling_price" type="number" step="0.01" value="${
                 product.selling_price

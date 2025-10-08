@@ -103,8 +103,8 @@ export class SolutionAnalysis extends HTMLElement {
       return;
     }
 
-    const productDisplayNameMap = new Map(
-      this._data.products.map((p) => [p.id, p.displayName])
+    const productNameMap = new Map(
+      this._data.products.map((p) => [p.id, p.name])
     );
 
     const processedData = this._data.solutions.map((d, i) => ({
@@ -180,7 +180,7 @@ export class SolutionAnalysis extends HTMLElement {
     const updateBarChart = (solutionData) => {
       const planData = Object.entries(solutionData.production_plan).map(
         ([key, value]) => ({
-          product: productDisplayNameMap.get(key) || key,
+          product: productNameMap.get(key) || key,
           quantity: value,
         })
       );
