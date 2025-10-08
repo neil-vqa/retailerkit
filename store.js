@@ -129,11 +129,9 @@ class Store {
   }
 
   _loadState() {
-    const savedGeneralParameters = localStorage.getItem(
-      "productionPlan_general_parameters"
-    );
-    const savedProducts = localStorage.getItem("productionPlan_products");
-    const savedComponents = localStorage.getItem("productionPlan_components");
+    const savedGeneralParameters = localStorage.getItem("general_parameters");
+    const savedProducts = localStorage.getItem("products");
+    const savedComponents = localStorage.getItem("components");
 
     const general_parameters = savedGeneralParameters
       ? JSON.parse(savedGeneralParameters)
@@ -146,7 +144,8 @@ class Store {
     const components = savedComponents
       ? JSON.parse(savedComponents).map((c) => new Component(c))
       : rawInitialState.components.map(
-          (c) => new Component({ name: c.name, cost: c.cost, stock: c.available })
+          (c) =>
+            new Component({ name: c.name, cost: c.cost, stock: c.available })
         );
 
     return { general_parameters, products, components };
@@ -154,15 +153,15 @@ class Store {
 
   _saveState() {
     localStorage.setItem(
-      "productionPlan_general_parameters",
+      "general_parameters",
       JSON.stringify(this.state.general_parameters, null, 2)
     );
     localStorage.setItem(
-      "productionPlan_products",
+      "products",
       JSON.stringify(this.state.products, null, 2)
     );
     localStorage.setItem(
-      "productionPlan_components",
+      "components",
       JSON.stringify(this.state.components, null, 2)
     );
   }
